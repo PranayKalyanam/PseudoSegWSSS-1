@@ -1,4 +1,6 @@
+import os
 from pathlib import Path
+from venv import logger
 import torch
 from torch.utils.data import DataLoader
 from torchvision import transforms
@@ -14,6 +16,7 @@ def _build_train_dataloader(
     iteration,
     iteration_manager,
     runtime,
+    logger=None,
 ):
     """
     Build the Stage-1 training dataloader.
@@ -24,8 +27,8 @@ def _build_train_dataloader(
     2. Select the appropriate dataset.
     3. Construct the DataLoader.
     """
-
-    logger = runtime.logger
+    if logger is None:
+        logger = runtime.logger
 
     logger.info("-" * 80)
     logger.info("Building Training Dataset")
@@ -48,21 +51,21 @@ def _build_train_dataloader(
     use_pseudo = iteration > 0
 
     if use_pseudo:
-        runtime.logger.info("Curriculum Mode : Ground Truth + Pseudo Labels")
+        logger.info("Curriculum Mode : Ground Truth + Pseudo Labels")
 
-        pseudo_label_file = iteration_manager.get_pseudo_label_file()
+        pseudo_label_file = os.path.join(config.pseudo_labels_root, "pseudo_weak_labels.json")
 
         logger.info("Curriculum Mode : Ground Truth + Pseudo Labels")
         
         
         if not Path(pseudo_label_file).exists():
 
-            runtime.logger.warning(
+            logger.warning(
                 "Pseudo label file not found: %s",
                 pseudo_label_file,
             )
 
-            runtime.logger.warning(
+            logger.warning(
                 "Using ground-truth labels as pseudo labels for this iteration."
             )
 
@@ -106,17 +109,17 @@ def _build_train_dataloader(
 
     train_loader = DataLoader(
         dataset=dataset,
-        batch_size=config.stage1_batch_size,
+        batch_size=config.batch_size,
         shuffle=True,
-        num_workers=config.stage1_num_workers,
+        num_workers=config.num_workers,
         pin_memory=torch.cuda.is_available(),
         drop_last=False,
     )
 
     logger.info(f"Training Samples : {len(dataset):,}")
-    logger.info(f"Batch Size       : {config.stage1_batch_size}")
+    logger.info(f"Batch Size       : {config.batch_size}")
     logger.info(f"Iterations/Epoch : {len(train_loader):,}")
-    logger.info(f"Workers          : {config.stage1_num_workers}")
+    logger.info(f"Workers          : {config.num_workers}")
     logger.info("Training dataloader successfully created.\n")
 
     return train_loader

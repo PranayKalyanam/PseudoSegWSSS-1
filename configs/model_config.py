@@ -207,20 +207,21 @@ def build_curriculum_parser() -> argparse.ArgumentParser:
     # ==========================================================================
 
     parser.add_argument("--stage1_trainroot", type=str, default="datasets/LUAD-HistoSeg/train5/", help="Training dataset.")
+    parser.add_argument("--pseudo_labels_root", type=str, default="datasets/LUAD-HistoSeg/train_PL/", help="Training dataset.")
     parser.add_argument("--stage1_testroot", type=str, default="datasets/LUAD-HistoSeg/test/", help="Testing dataset.")
-    parser.add_argument("--stage1_save_folder", type=str, default="checkpoints/", help="Checkpoint directory.")
+    # parser.add_argument("--save_folder", type=str, default="checkpoints/", help="Checkpoint directory.")
 
     parser.add_argument("--stage1_network", type=str, default="network.resnet38_cls", help="Classification network.")
-    parser.add_argument("--stage1_n_class", type=positive_int, default=4, help="Number of image-level classes.")
+    # parser.add_argument("--n_class", type=positive_int, default=4, help="Number of image-level classes.")
     parser.add_argument("--stage1_weights", type=str, default="init_weights/ilsvrc-cls_rna-a1_cls1000_ep-0001.pth", help="Initial classification weights.")
     parser.add_argument( "--stage1_checkpoint", type=str, default="checkpoints/stage1/stage1_best.pth", help="Checkpoint of the trained Stage-1 classifier used for evaluation.", )
 
-    parser.add_argument("--stage1_batch_size", type=positive_int, default=20, help="Training batch size.")
-    parser.add_argument("--stage1_max_epoches", type=positive_int, default=3, help="Number of training epochs.")
+    # parser.add_argument("--batch_size", type=positive_int, default=20, help="Training batch size.")
+    parser.add_argument("--stage1_epochs", type=positive_int, default=3, help="Number of training epochs.")
     parser.add_argument("--stage1_lr", type=float, default=0.01, help="Initial learning rate.")
     parser.add_argument("--stage1_wt_dec", type=float, default=5e-4, help="Weight decay.")
     parser.add_argument("--stage1_init_gama", type=float, default=1.0, help="Initial Progressive Dropout Attention coefficient.")
-    parser.add_argument("--stage1_num_workers", type=positive_int, default=4, help="Number of dataloader workers.")
+    parser.add_argument("--num_workers", type=positive_int, default=4, help="Number of dataloader workers.")
 
     parser.add_argument("--stage1_session_name", type=str, default="Stage 1", help="Training session name.")
     parser.add_argument("--stage1_env_name", type=str, default="PDA", help="TensorBoard environment.")
@@ -229,11 +230,70 @@ def build_curriculum_parser() -> argparse.ArgumentParser:
     parser.add_argument("--stage1_gt_loss_weight", type=float, default=0.8, help="Stage 1 ground truth loss weight.")
     parser.add_argument("--stage1_pseudo_loss_weight", type=float, default=0.2, help="Stage 1 pseudo-label loss weight.")
 
+
+
+    # ==========================================================================
+    # Stage-2 Configuration
+    # ==========================================================================
+ 
+    # --- Data roots / directories ------------------------------------------
+    # Every path stage2_train.py builds is derived from `--dataroot` plus
+    # these configurable sub-directory names, so nothing is hardcoded.
+    parser.add_argument("--stage2_train_image_subdir", type=str, default="train5", help="Sub-directory (under dataroot) containing Stage-2 training images.")
+    parser.add_argument("--stage2_pseudo_mask_root", type=str, default="train_PM", help="Sub-directory (under dataroot) containing generated pseudo masks.")
+    parser.add_argument("--stage2_pseudo_mask_dir", type=str, default="PM_bn7", help="Pseudo-mask sub-directory used as the main training target.")
+    parser.add_argument("--stage2_pseudo_mask_dir_a", type=str, default="PM_b5_2", help="Pseudo-mask sub-directory used as the secondary (A) training target.")
+    parser.add_argument("--stage2_pseudo_mask_dir_b", type=str, default="PM_b4_5", help="Pseudo-mask sub-directory used as the tertiary (B) training target.")
+    parser.add_argument("--stage2_val_subdir", type=str, default="val", help="Sub-directory (under dataroot) containing validation images/masks.")
+    parser.add_argument("--stage2_test_subdir", type=str, default="test", help="Sub-directory (under dataroot) containing test images/masks.")
+ 
+    # --- Checkpoints ---------------------------------------------------------
+    parser.add_argument("--save_folder", type=str, default="checkpoints/", help="Directory Stage-2 checkpoints are saved to.")
+    parser.add_argument("--stage2_checkname", type=str, default="deeplab-resnet", help="Checkpoint/experiment name used by the Saver.")
+    parser.add_argument("--stage2_checkpoint", type=str, default="checkpoints/stage2/stage2_best.pth", help="Checkpoint of the trained Stage-2 model used for evaluation/testing.")
+    parser.add_argument("--stage2_resume", type=str, default="init_weights/deeplab-resnet.pth.tar", help="Checkpoint to resume/initialize Stage-2 weights from at curriculum iteration 0.")
+    parser.add_argument("--stage2_ft", action="store_true", default=False, help="Fine-tuning mode: keep the segmentation head and restore optimizer state from `--stage2_resume`.")
+    parser.add_argument("--stage2_eval_interval", type=positive_int, default=1, help="Run validation every N epochs.")
+ 
+    # --- Model / backbone ----------------------------------------------------
+    parser.add_argument("--backbone", type=str, default="resnet", choices=["resnet", "xception", "drn", "mobilenet"], help="Feature extractor backbone.")
+    parser.add_argument("--stage2_out_stride", type=positive_int, default=16, help="Output stride of the backbone.")
+    parser.add_argument("--n_class", type=positive_int, default=4, help="Number of segmentation classes (including the ignore class).")
+    parser.add_argument("--stage2_sync_bn", type=bool, default=None, help="Use synchronized batch norm. Defaults to True when running on >1 GPU, else False.")
+    parser.add_argument("--stage2_freeze_bn", type=bool, default=False, help="Freeze batch-norm statistics during training.")
+ 
+    # --- Training hyperparameters ---------------------------------------------
+    parser.add_argument("--batch_size", type=positive_int, default=20, help="Training batch size.")
+    parser.add_argument("--stage2_epochs", type=positive_int, default=3, help="Number of training epochs.")
+    parser.add_argument("--stage2_lr", type=float, default=0.01, help="Initial (1x) learning rate for backbone parameters; the segmentation head uses 10x this value.")
+    parser.add_argument("--stage2_lr_scheduler", type=str, default="poly", choices=["poly", "step", "cos"], help="Learning-rate schedule.")
+    parser.add_argument("--stage2_momentum", type=float, default=0.9, help="SGD momentum.")
+    parser.add_argument("--stage2_weight_decay", type=float, default=5e-4, help="SGD weight decay.")
+    parser.add_argument("--stage2_nesterov", action="store_true", default=False, help="Use Nesterov momentum.")
+    parser.add_argument("--stage2_loss_type", type=str, default="ce", choices=["ce", "focal"], help="Segmentation loss function.")
+    # parser.add_argument("--num_workers", type=positive_int, default=2, help="Number of dataloader workers.")
+ 
+    # --- CUDA / devices --------------------------------------------------------
+    # Whether Stage-2 actually runs on CUDA is still governed by the shared
+    # top-level `--device` flag (see Runtime Configuration below); this only
+    # controls *which* GPUs are used once CUDA is selected.
+    parser.add_argument("--cuda", action="store_true", default=False, help="Enables CUDA (GPU) training.")
+    parser.add_argument("--stage2_gpu_ids", type=str, default="0", help="Comma-separated GPU ids to use when running on CUDA.")
+ 
+    # --- Testing / inference -----------------------------------------------
+    parser.add_argument("--stage2_is_gm", type=bool, default=True, help="Enable the CAM-based Gated Mechanism (using the Stage-1 classifier) during Stage-2 testing.")
+    parser.add_argument("--stage2_test_only", action="store_true", default=False, help="Skip training and evaluate `--stage2_checkpoint` directly.")
+ 
+    parser.add_argument("--stage2_gt_loss_weight", type=float, default=0.6, help="Loss weight for the primary pseudo-mask target.")
+    parser.add_argument("--stage2_pseudo_loss_weight_a", type=float, default=0.2, help="Loss weight for the secondary (A) pseudo-mask target.")
+    parser.add_argument("--stage2_pseudo_loss_weight_b", type=float, default=0.2, help="Loss weight for the tertiary (B) pseudo-mask target.")
+ 
+    
     # ==========================================================================
     # Curriculum Configuration
     # ==========================================================================
 
-    parser.add_argument("--num_iterations", type=positive_int, default=1, help="Maximum number of curriculum iterations.")
+    parser.add_argument("--num_iterations", type=positive_int, default=2, help="Maximum number of curriculum iterations.")
     parser.add_argument("--start_iteration", type=int, default=0, help="Iteration index to start from.")
     parser.add_argument("--resume", action="store_true", default=False, help="Resume an existing curriculum experiment.")
 

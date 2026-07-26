@@ -42,7 +42,7 @@ def _run_inference(
     logger.info("Evaluation Configuration")
     logger.info("-" * 80)
     logger.info("Testing Dataset      : %s", config.stage1_testroot)
-    logger.info("Number of Classes    : %d", config.stage1_n_class)
+    logger.info("Number of Classes    : %d", config.n_class)
     logger.info("Checkpoint           : %s", config.stage1_checkpoint)
     logger.info("Device               : %s", next(model.parameters()).device)
     logger.info("-" * 80)
@@ -62,7 +62,7 @@ def _run_inference(
         score = infer(
             model=model,
             dataroot=config.stage1_testroot,
-            n_class=config.stage1_n_class,
+            n_class=config.n_class,
         )
 
         progress_bar.update(1)

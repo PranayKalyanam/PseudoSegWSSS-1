@@ -28,7 +28,7 @@ def generate_pseudo_masks(
     logger.info(f"Dataset            : {config.dataset}")
     logger.info(f"Training Data      : {config.dataroot}")
     logger.info(f"Network            : {config.stage1_network}")
-    logger.info(f"Number of Classes  : {config.stage1_n_class}")
+    logger.info(f"Number of Classes  : {config.n_class}")
     logger.info("")
 
 

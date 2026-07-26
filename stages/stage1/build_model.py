@@ -6,6 +6,7 @@ import torch
 def _build_classifier(
     config,
     runtime,
+    logger=None,
 ):
     """
     Build the Stage-1 classification network.
@@ -30,12 +31,15 @@ def _build_classifier(
         Classification model ready for weight initialization.
     """
 
-    runtime.logger.info("-" * 80)
-    runtime.logger.info("Building Stage-1 Classifier")
-    runtime.logger.info("-" * 80)
+    if logger is None:
+        logger = runtime.logger
 
-    runtime.logger.info(f"Network : {config.stage1_network}")
-    runtime.logger.info(f"Classes : {config.stage1_n_class}")
+    logger.info("-" * 80)
+    logger.info("Building Stage-1 Classifier")
+    logger.info("-" * 80)
+
+    logger.info(f"Network : {config.stage1_network}")
+    logger.info(f"Classes : {config.n_class}")
 
     # ------------------------------------------------------------
     # Dynamically import the requested network
@@ -45,7 +49,7 @@ def _build_classifier(
 
     model = network_module.Net(
         config.stage1_init_gama,
-        n_class=config.stage1_n_class,
+        n_class=config.n_class,
     )
 
     # ------------------------------------------------------------
@@ -69,11 +73,11 @@ def _build_classifier(
         if parameter.requires_grad
     )
 
-    runtime.logger.info(f"Total Parameters     : {total_parameters:,}")
-    runtime.logger.info(f"Trainable Parameters : {trainable_parameters:,}")
-    runtime.logger.info(f"Device               : {runtime.device}")
+    logger.info(f"Total Parameters     : {total_parameters:,}")
+    logger.info(f"Trainable Parameters : {trainable_parameters:,}")
+    logger.info(f"Device               : {runtime.device}")
 
-    runtime.logger.info("Classifier successfully initialized.\n")
+    logger.info("Classifier successfully initialized.\n")
 
     return model
 
@@ -114,7 +118,7 @@ def _build_test_model(config):
     )
 
     model = network_module.Net_CAM(
-        n_class=config.stage1_n_class,
+        n_class=config.n_class,
     )
 
     # ------------------------------------------------------------

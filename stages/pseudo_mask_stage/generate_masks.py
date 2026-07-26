@@ -51,7 +51,7 @@ def _generate_masks(
         logger.info("=" * 80)
         logger.info(f"Dataset            : {config.dataset}")
         logger.info(f"Training Root      : {config.dataroot}")
-        logger.info(f"Number of Classes  : {config.stage1_n_class}")
+        logger.info(f"Number of Classes  : {config.n_class}")
         logger.info(f"Feature Maps       : {', '.join(feature_maps)}")
         logger.info("")
 
@@ -76,7 +76,7 @@ def _generate_masks(
         #     dataroot=config.dataroot,
         #     fm=feature_map,
         #     savepath=str(save_path),
-        #     n_class=config.stage1_n_class,
+        #     n_class=config.n_class,
         #     palette=palette,
         #     dataset=config.dataset,
         #     logger=logger
@@ -87,7 +87,7 @@ def _generate_masks(
             layer_name=feature_map,
             dataroot=config.dataroot,
             savepath=str(save_path),
-            n_class=config.stage1_n_class,
+            n_class=config.n_class,
             palette=palette,
             dataset=config.dataset,
             device=device,

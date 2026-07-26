@@ -190,14 +190,10 @@ class Stage1CurriculumDataset(Dataset):
         else:
 
             pseudo_label = torch.tensor(
-                self.pseudo_labels[filename],
+                self.pseudo_labels[image_id]["pseudo_label"],
                 dtype=torch.float32,
             )
 
-        # pseudo_label = torch.tensor(
-        #     self.pseudo_labels[image_id],
-        #     dtype=torch.float32,
-        # )
 
         return (
             image_id,
@@ -343,3 +339,191 @@ def make_data_loader(args, **kwargs):
     test_loader = DataLoader(test_set, batch_size=1, shuffle=False, **kwargs)
 
     return train_loader, val_loader, test_loader
+
+def make_data_loader_v2(args, **kwargs):
+
+    train_set   = Stage2_Dataset(args, base_dir=args.dataroot, split='train')
+    val_set     = Stage2_Dataset(args, base_dir=args.dataroot, split='val')
+    test_set    = Stage2_Dataset(args, base_dir=args.dataroot, split='test')
+
+    train_loader = DataLoader(train_set, batch_size=args.batch_size, shuffle=True, **kwargs)
+    val_loader = DataLoader(val_set, batch_size=args.batch_size, shuffle=False, **kwargs)
+    test_loader = DataLoader(test_set, batch_size=1, shuffle=False, **kwargs)
+
+    return train_loader, val_loader, test_loader
+
+
+class Stage2DatasetV2(Dataset):
+    """
+    Stage-2 Semantic Segmentation Dataset.
+
+    The dataset paths are supplied through the configuration instead
+    of being hardcoded inside the dataset.
+    """
+
+    def __init__(
+        self,
+        config,
+        split,
+    ):
+
+        super().__init__()
+
+        self.config = config
+        self.split = split.lower()
+
+        # ------------------------------------------------------------
+        # Resolve directories from configuration
+        # ------------------------------------------------------------
+
+        if self.split == "train":
+
+            self.image_dir = config.stage2_train_image_dir
+            self.label_dir = config.stage2_train_label_dir
+            self.label_dir_a = config.stage2_train_label_dir_a
+            self.label_dir_b = config.stage2_train_label_dir_b
+
+        elif self.split == "val":
+
+            self.image_dir = config.stage2_val_image_dir
+            self.label_dir = config.stage2_val_label_dir
+
+        elif self.split == "test":
+
+            self.image_dir = config.stage2_test_image_dir
+            self.label_dir = config.stage2_test_label_dir
+
+        else:
+
+            raise ValueError(f"Unknown split: {split}")
+
+        # ------------------------------------------------------------
+        # File lists
+        # ------------------------------------------------------------
+
+        self.filenames = sorted(
+            os.path.splitext(file)[0]
+            for file in os.listdir(self.image_dir)
+            if not file.startswith(".")
+        )
+
+        self.images = [
+            os.path.join(self.image_dir, f"{name}.png")
+            for name in self.filenames
+        ]
+
+        self.labels = [
+            os.path.join(self.label_dir, f"{name}.png")
+            for name in self.filenames
+        ]
+
+        if self.split == "train":
+
+            self.labels_a = [
+                os.path.join(self.label_dir_a, f"{name}.png")
+                for name in self.filenames
+            ]
+
+            self.labels_b = [
+                os.path.join(self.label_dir_b, f"{name}.png")
+                for name in self.filenames
+            ]
+
+        assert len(self.images) == len(self.labels)
+
+        print(
+            f"Number of images in {self.split}: {len(self.images)}"
+        )
+
+    def __len__(self):
+        return len(self.images)
+
+    def __getitem__(self, index):
+
+        if self.split == "train":
+
+            image, label, label_a, label_b = self._load_sample(index)
+
+            sample = {
+                "image": image,
+                "label": label,
+                "label_a": label_a,
+                "label_b": label_b,
+            }
+
+            return self.transform_tr_ab(sample)
+
+        else:
+
+            image, label = self._load_sample(index)
+
+            sample = {
+                "image": image,
+                "label": label,
+            }
+
+            return self.transform_val(sample), self.images[index]
+
+    def _load_sample(self, index):
+
+        image = Image.open(
+            self.images[index]
+        ).convert("RGB")
+
+        label = Image.open(
+            self.labels[index]
+        )
+
+        if self.split == "train":
+
+            label_a = Image.open(
+                self.labels_a[index]
+            )
+
+            label_b = Image.open(
+                self.labels_b[index]
+            )
+
+            return image, label, label_a, label_b
+
+        return image, label
+
+    def transform_tr(self, sample):
+
+        composed = transforms.Compose(
+            [
+                tr.RandomHorizontalFlip(),
+                tr.RandomGaussianBlur(),
+                tr.Normalize(),
+                tr.ToTensor(),
+            ]
+        )
+
+        return composed(sample)
+
+    def transform_tr_ab(self, sample):
+
+        composed = transforms.Compose(
+            [
+                tr.RandomHorizontalFlip_ab(),
+                tr.RandomGaussianBlur_ab(),
+                tr.Normalize_ab(),
+                tr.ToTensor_ab(),
+            ]
+        )
+
+        return composed(sample)
+
+    def transform_val(self, sample):
+
+        composed = transforms.Compose(
+            [
+                tr.Normalize(),
+                tr.ToTensor(),
+            ]
+        )
+
+        return composed(sample)
+
+    def __str__(self):
+        return self.split

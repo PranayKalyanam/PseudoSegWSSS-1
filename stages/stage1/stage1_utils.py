@@ -18,7 +18,7 @@ def _build_optimizer(
     train_loader,
 ):
 
-    max_steps = len(train_loader) * config.stage1_max_epoches
+    max_steps = len(train_loader) * config.stage1_epochs
     #   max_step = (len(train_dataset) // args.batch_size) * args.max_epoches
 
     param_groups  = model.get_parameter_groups()
@@ -42,6 +42,7 @@ def _build_optimizer(
 def _load_pretrained_weights(
     config,
     model,
+    logger=None,
 ):
     """
     Initialize the classifier weights.
@@ -70,14 +71,14 @@ def _load_pretrained_weights(
 
     if config.stage1_weights is None:
 
-        print("No pretrained weights specified. Using random initialization.")
+        logger.info("No pretrained weights specified. Using random initialization.")
 
         return
 
     if not os.path.isfile(config.stage1_weights):
 
-        print(f"Weight file not found: {config.stage1_weights}")
-        print("Using random initialization.")
+        logger.info(f"Weight file not found: {config.stage1_weights}")
+        logger.info("Using random initialization.")
 
         return
 
@@ -87,7 +88,7 @@ def _load_pretrained_weights(
 
     if config.stage1_weights.endswith(".pth"):
 
-        print(f"Loading pretrained weights from:\n{config.stage1_weights}")
+        logger.info(f"Loading pretrained weights from:\n{config.stage1_weights}")
 
         weights = torch.load(
             config.stage1_weights,
@@ -100,7 +101,7 @@ def _load_pretrained_weights(
             strict=False,
         )
 
-        print("Pretrained weights loaded successfully.")
+        logger.info("Pretrained weights loaded successfully.")
 
         return
 
@@ -258,6 +259,7 @@ def _load_checkpoint(
 def _save_checkpoint(
     config,
     training_history,
+    logger=None,
 ):
     """
     Save the trained Stage-1 classifier checkpoint.
@@ -292,7 +294,7 @@ def _save_checkpoint(
     # checkpoint_directory = os.path.dirname(checkpoint_path)
     # os.makedirs(checkpoint_directory, exist_ok=True)
     
-    checkpoint_directory = Path(config.stage1_save_folder) / "stage1"
+    checkpoint_directory = Path(config.save_folder) / "stage1"
     checkpoint_directory.mkdir(
         parents=True,
         exist_ok=True,
@@ -308,8 +310,8 @@ def _save_checkpoint(
         "model_state_dict": training_history["best_model_state"],
         "network": config.stage1_network,
         "dataset": config.dataset,
-        "num_classes": config.stage1_n_class,
-        "epochs": config.stage1_max_epoches,
+        "num_classes": config.n_class,
+        "epochs": config.stage1_epochs,
         
         # Training summary
         "best_epoch": training_history["best_epoch"],
@@ -356,6 +358,7 @@ def _create_stage1_result(
     checkpoint_path,
     training_history,
     runtime,
+    logger=None,
 ):
     """
     Create the Stage-1 result object.

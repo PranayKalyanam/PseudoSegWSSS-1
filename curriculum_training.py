@@ -35,7 +35,10 @@ Pseudo Label Generation
 import os
 import time
 from pathlib import Path
+from venv import logger
 from stages.generate_pseudo_mask import generate_pseudo_masks
+from stages.pseudo_label_stage.generate_pseudo_labels import generate_pseudo_labels
+from stages.stage2_train import stage2_train
 from utils.logger import get_logger
 
 from configs.model_config import get_curriculum_config
@@ -71,6 +74,7 @@ class CurriculumController:
         )
 
         self.num_iterations = config.num_iterations
+        self.start_iteration = config.start_iteration
 
 
     # ----------------------------------------------------------
@@ -88,7 +92,7 @@ class CurriculumController:
 
         total_start = time.time()
 
-        for iteration in range(self.num_iterations):
+        for iteration in range(self.start_iteration, self.num_iterations):
 
             self.run_iteration(iteration)
 
@@ -168,25 +172,13 @@ class CurriculumController:
         self.logger.info(f"{'Metric':<35} {'Value'}")
         self.logger.info("-" * 90)
 
-        self.logger.info(
-            f"{'Checkpoint Used':<35} "
-            f"{pseudo_mask_results.checkpoint_path}"
-        )
+        self.logger.info(f"{'Checkpoint Used':<35} " f"{pseudo_mask_results.checkpoint_path}")
 
-        self.logger.info(
-            f"{'Dataset':<35} "
-            f"{pseudo_mask_results.dataset}"
-        )
+        self.logger.info( f"{'Dataset':<35} " f"{pseudo_mask_results.dataset}" )
 
-        self.logger.info(
-            f"{'Training Dataset':<35} "
-            f"{pseudo_mask_results.data_root}"
-        )
+        self.logger.info( f"{'Training Dataset':<35} " f"{pseudo_mask_results.data_root}" )
 
-        self.logger.info(
-            f"{'Feature Maps':<35} "
-            f"{', '.join(pseudo_mask_results.output_paths.keys())}"
-        )
+        self.logger.info( f"{'Feature Maps':<35} " f"{', '.join(pseudo_mask_results.output_paths.keys())}" )
 
         self.logger.info("")
         self.logger.info("Generated Pseudo Mask Directories")
@@ -197,10 +189,7 @@ class CurriculumController:
                 f"  {feature_map:<10} : {directory}"
             )
 
-        self.logger.info(
-            f"{'Generation Time':<35} "
-            f"{pseudo_mask_results.generation_time}"
-        )
+        self.logger.info( f"{'Generation Time':<35} " f"{pseudo_mask_results.generation_time}" )
 
         self.logger.info("=" * 90)
         self.logger.info("")
@@ -212,6 +201,35 @@ class CurriculumController:
 
         self.logger.info("[3/4] Stage-2 Segmentation Training")
 
+        stage2_results = stage2_train(
+            config=self.cfg,
+            iteration=iteration,
+            iteration_manager=iteration_manager,
+        )
+
+        self.logger.info("")
+        self.logger.info("\n" + "=" * 90)
+        self.logger.info("Stage-2 Training Summary")
+        self.logger.info("=" * 90)
+        
+        self.logger.info(f"{'Metric':<35} {'Value'}")
+        self.logger.info("-" * 90)
+        
+        self.logger.info(f"{'Iteration':<35} {stage2_results.iteration}")
+        self.logger.info(f"{'Dataset':<35} {stage2_results.dataset}")
+        self.logger.info(f"{'Network':<35} {stage2_results.network}")
+        
+        self.logger.info(f"{'Best mIoU':<20}: {stage2_results.best_miou:.4f}")
+        self.logger.info(f"{'Pixel Accuracy':<20}: {stage2_results.test_results['Acc']:.4f}")
+        self.logger.info(f"{'Mean IoU':<20}: {stage2_results.test_results['mIoU']:.4f}")
+        self.logger.info(f"{'FWIoU':<20}: {stage2_results.test_results['FWIoU']:.4f}")
+        self.logger.info(f"{'Inference Time':<20}: {stage2_results.test_results['inference_time']:.2f} sec")
+        self.logger.info(f"{'Per-class IoU':<20}: {stage2_results.test_results['ious']}")
+        self.logger.info(f"{'Testing Time (seconds)':<35} {stage2_results.runtime_seconds:.2f}")
+        self.logger.info(f"{'Checkpoint':<35} {stage2_results.checkpoint_path}")
+        
+        self.logger.info("=" * 90)
+        self.logger.info("")
        
         # ------------------------------------------------------
         # Generate pseudo image labels
@@ -219,6 +237,32 @@ class CurriculumController:
 
         self.logger.info("[4/4] Pseudo Label Generation")
 
+        pseudo_label_results = generate_pseudo_labels(
+                    config=self.cfg,
+                    iteration=iteration,
+                    iteration_manager=iteration_manager,
+                )
+        
+        self.logger.info("")
+        self.logger.info("\n" + "=" * 90)
+        self.logger.info("Pseudo Label Generation Summary")
+        self.logger.info("=" * 90)
+
+        self.logger.info(f"{'Metric':<35} {'Value'}")
+        self.logger.info("-" * 90)
+
+        self.logger.info(f"{'Iteration':<35} {pseudo_label_results.iteration}")
+        self.logger.info(f"{'Dataset':<35} {pseudo_label_results.dataset}")
+        self.logger.info(f"{'Images Processed':<35} {pseudo_label_results.number_of_images}")
+        self.logger.info(f"{'Pseudo Labels Generated':<35} {pseudo_label_results.number_of_labels_generated}")
+        self.logger.info(f"{'Generation Time (seconds)':<35} {pseudo_label_results.runtime_seconds:.2f}")
+        self.logger.info(f"{'Checkpoint Used':<35} {pseudo_label_results.checkpoint_path}")
+        self.logger.info(f"{'Output Directory':<35} {pseudo_label_results.output_directory}")
+        self.logger.info(f"{'Status':<35} {'Success' if pseudo_label_results.success else 'Failed'}")
+
+        self.logger.info("=" * 90)
+        self.logger.info("")
+    
      
         # ------------------------------------------------------
         # Save iteration information
