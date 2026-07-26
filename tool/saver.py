@@ -12,3 +12,8 @@ class Saver(object):
         """Saves checkpoint to disk"""
         filename = os.path.join(self.args.savepath, filename)
         torch.save(state, filename)
+
+    def save_checkpoint_v2(self, state, checkpoint_path):
+            """Saves checkpoint to disk"""
+            # filename = os.path.join(self.args.save_folder, filename)
+            torch.save(state, checkpoint_path)

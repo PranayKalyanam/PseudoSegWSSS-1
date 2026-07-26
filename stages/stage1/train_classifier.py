@@ -24,6 +24,7 @@ def _train_classifier(
     model,
     train_loader,
     optimizer,
+    logger=None,
 ):
     """
     Train the Stage-1 classifier for one curriculum iteration.
@@ -50,9 +51,9 @@ def _train_classifier(
 
     use_pseudo = iteration > 0
 
-    runtime.logger.info("=" * 80)
-    runtime.logger.info("Stage-1 Training")
-    runtime.logger.info("=" * 80)
+    logger.info("=" * 80)
+    logger.info("Stage-1 Training")
+    logger.info("=" * 80)
 
     avg_meter = pyutils.AverageMeter(
         "loss",
@@ -68,11 +69,11 @@ def _train_classifier(
 
 
 
-    max_step = len(train_loader) * config.stage1_max_epoches
+    max_step = len(train_loader) * config.stage1_epochs
 
-    # for epoch in range(config.stage1_max_epoches):
+    # for epoch in range(config.stage1_epochs):
     epoch_bar = tqdm(
-        range(config.stage1_max_epoches),
+        range(config.stage1_epochs),
         desc="Training",
         dynamic_ncols=True,
         leave=True,
@@ -216,7 +217,7 @@ def _train_classifier(
             optimizer.step()
             
             epoch_bar.set_description(
-                f"Epoch {epoch + 1}/{config.stage1_max_epoches}"
+                f"Epoch {epoch + 1}/{config.stage1_epochs}"
             )
 
             epoch_bar.set_postfix(
@@ -243,7 +244,8 @@ def _train_classifier(
                     optimizer.global_step / max_step
                 )
 
-                runtime.logger.info(
+                if logger:
+                    logger.info(
 
                     "Epoch:%2d "
                     "Iter:%5d/%5d "
@@ -301,7 +303,7 @@ def _train_classifier(
 
             model.gama *= 0.98
 
-        runtime.logger.info(
+        logger.info(
             f"PDA Gamma : {model.gama:.4f}"
         )
         
@@ -317,7 +319,7 @@ def _train_classifier(
             best_epoch = epoch + 1
             best_model_state = deepcopy(model.state_dict())
 
-            runtime.logger.info(
+            logger.info(
                 f"New best model saved "
                 f"(Epoch {best_epoch}, Loss={best_loss:.4f})"
             )
@@ -330,18 +332,19 @@ def _train_classifier(
         "loss": avg_meter.get("loss"),
         "avg_ep_EM": avg_meter.get("avg_ep_EM"),
         "avg_ep_acc": avg_meter.get("avg_ep_acc"),
-        "epochs": config.stage1_max_epoches,
+        "epochs": config.stage1_epochs,
         "iterations": optimizer.global_step,
         "best_epoch": best_epoch, 
         "best_model_state": best_model_state,
     }
 
-    runtime.logger.info("=" * 80)
-    runtime.logger.info("Stage-1 Training Completed")
-    runtime.logger.info("=" * 80)
-    runtime.logger.info(f"Final Loss        : {training_history['loss']:.4f}")
-    runtime.logger.info(f"Final Exact Match : {training_history['avg_ep_EM']:.4f}")
-    runtime.logger.info(f"Final Accuracy    : {training_history['avg_ep_acc']:.4f}")
+    if logger:
+        logger.info("=" * 80)
+        logger.info("Stage-1 Training Completed")
+        logger.info("=" * 80)
+        logger.info(f"Final Loss        : {training_history['loss']:.4f}")
+        logger.info(f"Final Exact Match : {training_history['avg_ep_EM']:.4f}")
+        logger.info(f"Final Accuracy    : {training_history['avg_ep_acc']:.4f}")
 
     runtime.writer.flush()
     runtime.writer.close()

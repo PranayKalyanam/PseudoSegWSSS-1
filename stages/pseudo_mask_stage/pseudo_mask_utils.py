@@ -41,7 +41,7 @@ def _build_pseudo_mask_model(
     if logger:
         logger.info(f"Device           : {device}")
         logger.info(f"Network          : {config.stage1_network}")
-        logger.info(f"Number of Classes: {config.stage1_n_class}")
+        logger.info(f"Number of Classes: {config.n_class}")
 
     # ------------------------------------------------------------
     # Build network
@@ -53,7 +53,7 @@ def _build_pseudo_mask_model(
         ),
         "Net_CAM",
     )(
-        n_class=config.stage1_n_class,
+        n_class=config.n_class,
     )
 
     model = model.to(device)
