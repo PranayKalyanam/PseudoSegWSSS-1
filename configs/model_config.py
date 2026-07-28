@@ -196,37 +196,38 @@ def build_curriculum_parser() -> argparse.ArgumentParser:
 
     # ==========================================================================
     # Dataset Configuration
+    """Top-level dataset location and output directory options."""
     # ==========================================================================
-
     parser.add_argument("--dataset", type=str, default="luad", help="Dataset name.")
     parser.add_argument("--dataroot", type=str, default="datasets/LUAD-HistoSeg", help="Root directory of the dataset.")
     parser.add_argument("--output_dir", type=str, default="outputs", help="Root directory for curriculum outputs.")
 
+
     # ==========================================================================
     # Stage-1 Configuration
+    """Stage-1 classification network: data paths, weights, and training hyperparameters."""
     # ==========================================================================
-
+    # --- Data paths / checkpoints ---
     parser.add_argument("--stage1_trainroot", type=str, default="datasets/LUAD-HistoSeg/train5/", help="Training dataset.")
     parser.add_argument("--pseudo_labels_root", type=str, default="datasets/LUAD-HistoSeg/train_PL/", help="Training dataset.")
     parser.add_argument("--stage1_testroot", type=str, default="datasets/LUAD-HistoSeg/test/", help="Testing dataset.")
-    # parser.add_argument("--save_folder", type=str, default="checkpoints/", help="Checkpoint directory.")
-
     parser.add_argument("--stage1_network", type=str, default="network.resnet38_cls", help="Classification network.")
-    # parser.add_argument("--n_class", type=positive_int, default=4, help="Number of image-level classes.")
     parser.add_argument("--stage1_weights", type=str, default="init_weights/ilsvrc-cls_rna-a1_cls1000_ep-0001.pth", help="Initial classification weights.")
     parser.add_argument( "--stage1_checkpoint", type=str, default="checkpoints/stage1/stage1_best.pth", help="Checkpoint of the trained Stage-1 classifier used for evaluation.", )
-
-    # parser.add_argument("--batch_size", type=positive_int, default=20, help="Training batch size.")
-    parser.add_argument("--stage1_epochs", type=positive_int, default=3, help="Number of training epochs.")
+    
+    # --- Training hyperparameters ---
+    parser.add_argument("--stage1_epochs", type=positive_int, default=20, help="Number of training epochs.")
     parser.add_argument("--stage1_lr", type=float, default=0.01, help="Initial learning rate.")
     parser.add_argument("--stage1_wt_dec", type=float, default=5e-4, help="Weight decay.")
     parser.add_argument("--stage1_init_gama", type=float, default=1.0, help="Initial Progressive Dropout Attention coefficient.")
     parser.add_argument("--num_workers", type=positive_int, default=4, help="Number of dataloader workers.")
 
+    # --- Logging / naming ---
     parser.add_argument("--stage1_session_name", type=str, default="Stage 1", help="Training session name.")
     parser.add_argument("--stage1_env_name", type=str, default="PDA", help="TensorBoard environment.")
     parser.add_argument("--stage1_model_name", type=str, default="PDA", help="Model identifier.")
     
+    # --- Loss weighting ---
     parser.add_argument("--stage1_gt_loss_weight", type=float, default=0.8, help="Stage 1 ground truth loss weight.")
     parser.add_argument("--stage1_pseudo_loss_weight", type=float, default=0.2, help="Stage 1 pseudo-label loss weight.")
 
@@ -234,11 +235,10 @@ def build_curriculum_parser() -> argparse.ArgumentParser:
 
     # ==========================================================================
     # Stage-2 Configuration
+    """Stage-2 segmentation model: data paths, backbone/model, training, and inference options. """
     # ==========================================================================
  
-    # --- Data roots / directories ------------------------------------------
-    # Every path stage2_train.py builds is derived from `--dataroot` plus
-    # these configurable sub-directory names, so nothing is hardcoded.
+    # --- Data roots / sub-directories ------------------------------------------
     parser.add_argument("--stage2_train_image_subdir", type=str, default="train5", help="Sub-directory (under dataroot) containing Stage-2 training images.")
     parser.add_argument("--stage2_pseudo_mask_root", type=str, default="train_PM", help="Sub-directory (under dataroot) containing generated pseudo masks.")
     parser.add_argument("--stage2_pseudo_mask_dir", type=str, default="PM_bn7", help="Pseudo-mask sub-directory used as the main training target.")
@@ -271,8 +271,7 @@ def build_curriculum_parser() -> argparse.ArgumentParser:
     parser.add_argument("--stage2_weight_decay", type=float, default=5e-4, help="SGD weight decay.")
     parser.add_argument("--stage2_nesterov", action="store_true", default=False, help="Use Nesterov momentum.")
     parser.add_argument("--stage2_loss_type", type=str, default="ce", choices=["ce", "focal"], help="Segmentation loss function.")
-    # parser.add_argument("--num_workers", type=positive_int, default=2, help="Number of dataloader workers.")
- 
+   
     # --- CUDA / devices --------------------------------------------------------
     # Whether Stage-2 actually runs on CUDA is still governed by the shared
     # top-level `--device` flag (see Runtime Configuration below); this only
@@ -295,7 +294,9 @@ def build_curriculum_parser() -> argparse.ArgumentParser:
 
     parser.add_argument("--num_iterations", type=positive_int, default=2, help="Maximum number of curriculum iterations.")
     parser.add_argument("--start_iteration", type=int, default=0, help="Iteration index to start from.")
+    parser.add_argument("--use_pseudo_iteration", type=int, default=4, help="Iteration index to start using pseudo labels.")
     parser.add_argument("--resume", action="store_true", default=False, help="Resume an existing curriculum experiment.")
+    
 
     # ==========================================================================
     # Runtime Configuration

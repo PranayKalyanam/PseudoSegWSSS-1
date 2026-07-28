@@ -24,6 +24,7 @@ import os
 import time
 from datetime import datetime, timezone
 
+from stages.stage2.stage2_utils import _load_stage1_classifier
 from utils.logger import get_logger
 
 from stages.pseudo_label_stage.pseudo_label_utils import (
@@ -92,6 +93,11 @@ def generate_pseudo_labels(
         config=config,
         logger=logger,
     )
+    
+    stage1_model = _load_stage1_classifier(
+            config=config,
+            logger=logger,
+        )
 
     # ------------------------------------------------------------
     # Load best Stage-2 checkpoint
@@ -132,6 +138,7 @@ def generate_pseudo_labels(
         model=model,
         dataloader=dataloader,
         iteration=iteration,
+        stage1_model=stage1_model,
         logger=logger,
     )
 

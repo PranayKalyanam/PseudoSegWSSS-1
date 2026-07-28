@@ -48,7 +48,7 @@ def _build_train_dataloader(
     # Dataset selection
     # ------------------------------------------------------------
 
-    use_pseudo = iteration > 0
+    use_pseudo = iteration > config.use_pseudo_iteration
 
     if use_pseudo:
         logger.info("Curriculum Mode : Ground Truth + Pseudo Labels")

@@ -49,7 +49,7 @@ def _train_classifier(
         Training statistics collected during optimization.
     """
 
-    use_pseudo = iteration > 0
+    use_pseudo = iteration > config.use_pseudo_iteration
 
     logger.info("=" * 80)
     logger.info("Stage-1 Training")

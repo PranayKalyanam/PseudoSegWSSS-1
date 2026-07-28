@@ -75,6 +75,8 @@ class CurriculumController:
 
         self.num_iterations = config.num_iterations
         self.start_iteration = config.start_iteration
+        
+        self.use_pseudo_iteration = config.use_pseudo_iteration
 
 
     # ----------------------------------------------------------
@@ -236,33 +238,36 @@ class CurriculumController:
         # ------------------------------------------------------
 
         self.logger.info("[4/4] Pseudo Label Generation")
-
-        pseudo_label_results = generate_pseudo_labels(
-                    config=self.cfg,
-                    iteration=iteration,
-                    iteration_manager=iteration_manager,
-                )
+        use_pseudo = iteration > self.use_pseudo_iteration
         
-        self.logger.info("")
-        self.logger.info("\n" + "=" * 90)
-        self.logger.info("Pseudo Label Generation Summary")
-        self.logger.info("=" * 90)
-
-        self.logger.info(f"{'Metric':<35} {'Value'}")
-        self.logger.info("-" * 90)
-
-        self.logger.info(f"{'Iteration':<35} {pseudo_label_results.iteration}")
-        self.logger.info(f"{'Dataset':<35} {pseudo_label_results.dataset}")
-        self.logger.info(f"{'Images Processed':<35} {pseudo_label_results.number_of_images}")
-        self.logger.info(f"{'Pseudo Labels Generated':<35} {pseudo_label_results.number_of_labels_generated}")
-        self.logger.info(f"{'Generation Time (seconds)':<35} {pseudo_label_results.runtime_seconds:.2f}")
-        self.logger.info(f"{'Checkpoint Used':<35} {pseudo_label_results.checkpoint_path}")
-        self.logger.info(f"{'Output Directory':<35} {pseudo_label_results.output_directory}")
-        self.logger.info(f"{'Status':<35} {'Success' if pseudo_label_results.success else 'Failed'}")
-
-        self.logger.info("=" * 90)
-        self.logger.info("")
-    
+        if use_pseudo:
+            pseudo_label_results = generate_pseudo_labels(
+                            config=self.cfg,
+                            iteration=iteration,
+                            iteration_manager=iteration_manager,
+                        )
+            self.logger.info("")
+            self.logger.info("\n" + "=" * 90)
+            self.logger.info("Pseudo Label Generation Summary")
+            self.logger.info("=" * 90)
+            
+            self.logger.info(f"{'Metric':<35} {'Value'}")
+            self.logger.info("-" * 90)
+            
+            self.logger.info(f"{'Iteration':<35} {pseudo_label_results.iteration}")
+            self.logger.info(f"{'Dataset':<35} {pseudo_label_results.dataset}")
+            self.logger.info(f"{'Images Processed':<35} {pseudo_label_results.number_of_images}")
+            self.logger.info(f"{'Pseudo Labels Generated':<35} {pseudo_label_results.number_of_labels_generated}")
+            self.logger.info(f"{'Generation Time (seconds)':<35} {pseudo_label_results.runtime_seconds:.2f}")
+            self.logger.info(f"{'Checkpoint Used':<35} {pseudo_label_results.checkpoint_path}")
+            self.logger.info(f"{'Output Directory':<35} {pseudo_label_results.output_directory}")
+            self.logger.info(f"{'Status':<35} {'Success' if pseudo_label_results.success else 'Failed'}")
+            
+            self.logger.info("=" * 90)
+            self.logger.info("")
+        else:
+            self.logger.info("Skipping Pseudo Label Generation")
+        
      
         # ------------------------------------------------------
         # Save iteration information

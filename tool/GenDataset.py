@@ -126,7 +126,7 @@ class Stage1_TrainDataset(Dataset):
 
 class Stage1CurriculumDataset(Dataset):
     """
-    Stage-1 dataset used for curriculum iterations (iteration > 0).
+    Stage-1 dataset used for curriculum iterations (iteration > config.use_pseudo_iteration).
 
     Returns
     -------

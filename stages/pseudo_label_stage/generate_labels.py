@@ -66,7 +66,7 @@ def _convert_segmentation_to_multilabel(segmentation_prediction, num_classes, ig
 # Inference loop
 # ------------------------------------------------------------
 
-def _run_pseudo_label_inference(config, model, dataloader, iteration, logger=None):
+def _run_pseudo_label_inference(config, model, dataloader, iteration, stage1_model=None, logger=None):
     """
     Iterate over the inference dataloader, run segmentation inference,
     and convert each predicted mask into a pseudo weak label.
@@ -113,7 +113,17 @@ def _run_pseudo_label_inference(config, model, dataloader, iteration, logger=Non
             images = images.to(device)
 
             output = model(images)
+            if config.stage2_is_gm:
+                _, y_cls = stage1_model.forward_cam(images)
+                y_cls = y_cls.cpu().data
+                pred_cls = y_cls > 0.1
+            
             predictions = np.argmax(output.data.cpu().numpy(), axis=1)
+            
+            if config.stage2_is_gm and stage1_model is None:
+                raise ValueError(
+                    "stage1_model must be provided when stage2_is_gm is enabled."
+                )
 
             for sample_index, filename in enumerate(filenames):
                 multilabel = _convert_segmentation_to_multilabel(
@@ -121,6 +131,13 @@ def _run_pseudo_label_inference(config, model, dataloader, iteration, logger=Non
                     num_classes=config.n_class,
                     ignore_class=ignore_class,
                 )
+                
+                if config.stage2_is_gm:
+                    classifier_label = pred_cls[sample_index].tolist()
+                    multilabel = [
+                        int(seg and cls)
+                        for seg, cls in zip(multilabel, classifier_label)
+                        ]
 
                 pseudo_labels[filename] = {
                     "pseudo_label": multilabel,
